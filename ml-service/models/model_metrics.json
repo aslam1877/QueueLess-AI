@@ -1,0 +1,60 @@
+{
+  "model_name": "Gradient Boosting",
+  "trained_at": "2026-10-12T13:12:10.792065",
+  "dataset_samples": 10000,
+  "test_split_ratio": 0.2,
+  "features_used": [
+    "people_ahead",
+    "active_counters",
+    "service_duration_min",
+    "hour_of_day",
+    "day_of_week",
+    "is_weekend",
+    "is_peak_hour",
+    "baseline_estimate",
+    "service_category"
+  ],
+  "baseline_benchmark": {
+    "mae": 18.89,
+    "rmse": 36.29,
+    "r2": 0.9085
+  },
+  "ml_metrics": {
+    "mae": 6.53,
+    "rmse": 13.4,
+    "r2": 0.9875,
+    "mae_improvement_pct": 65.4
+  },
+  "candidate_comparisons": {
+    "Ridge Regression": {
+      "mae": 10.9,
+      "rmse": 18.62,
+      "r2": 0.9759,
+      "mae_improvement_pct": 42.3
+    },
+    "Random Forest": {
+      "mae": 7.06,
+      "rmse": 13.35,
+      "r2": 0.9876,
+      "mae_improvement_pct": 62.6
+    },
+    "Gradient Boosting": {
+      "mae": 6.53,
+      "rmse": 13.4,
+      "r2": 0.9875,
+      "mae_improvement_pct": 65.4
+    }
+  },
+  "top_feature_importances": {
+    "baseline_estimate": 0.9688,
+    "is_peak_hour": 0.0123,
+    "people_ahead": 0.0052,
+    "service_category_PROCEDURE": 0.0027,
+    "day_of_week": 0.0024,
+    "service_category_EXPRESS_SERVICE": 0.0023,
+    "is_weekend": 0.0019,
+    "hour_of_day": 0.0019,
+    "service_category_CONSULTATION": 0.0018,
+    "service_duration_min": 0.0008
+  }
+}
