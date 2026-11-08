@@ -57,13 +57,18 @@ graph TB
    - Dynamically accounts for peak rush hours (11:00–14:00, 17:00–19:00), day of week congestion, counter count, and procedure complexity.
 3. **Resilient Circuit-Breaker Fallback**
    - Zero-downtime architecture: if the Python ML microservice is unreachable, the Spring Boot `PredictionClient` automatically degrades to deterministic queue mathematics ($\lceil \frac{\text{peopleAhead} \times \text{duration}}{\text{activeCounters}} \rceil$).
-4. **Role-Based Access Control (RBAC)**
+4. **Role-Based Separation & Access Control (RBAC)**
    - Stateless JWT tokens with BCrypt password hashing.
-   - Roles: `ROLE_CUSTOMER`, `ROLE_STAFF`, `ROLE_BUSINESS_OWNER`.
-   - Customers can only manage their own entries; staff and owners control counters and queue operations.
-5. **Interactive AI vs. Baseline Inspector**
-   - Real-time interactive sandbox comparing AI predictions with baseline formulas.
-   - Live feature attribution, rush factor adjustments, and latency telemetry.
+   - Separate personas:
+     - **Patient Portal**: Clean 2-step check-in (Select Service ➔ Get Ticket), live dynamic wait estimates, audible alerts, and step-away guidance.
+     - **Staff Calling Desk**: Multi-department queue switcher (*General Consultation*, *MRI*, *Blood Test*), station/desk assignment, and one-click token calling.
+     - **Executive Analytics**: Hourly congestion charts, total throughput, completion rate, and no-show stats.
+5. **Audible Chime & Push Alert Notifications**
+   - Web Audio API dual-tone chime ($D_5 \to A_5$) triggers when a ticket is called.
+   - HTML5 Notification API integration with tab title flashing for true step-away freedom.
+6. **Frictionless QR Code & Walk-in Access**
+   - Seamless guest check-in without requiring manual registration or passwords.
+   - Printable waiting room signage with scannable QR codes linking directly to specific service lines.
 
 ---
 

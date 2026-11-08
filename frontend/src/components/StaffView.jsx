@@ -30,6 +30,8 @@ import {
 
 export default function StaffView({ 
   currentQueue, 
+  availableQueues = [],
+  onSelectQueue,
   onRefreshQueue, 
   onEnsureDemoQueue 
 }) {
@@ -238,6 +240,62 @@ export default function StaffView({
           </button>
         </div>
       </div>
+
+      {/* Department / Service Queue Switcher */}
+      {availableQueues && availableQueues.length > 0 && (
+        <div style={{
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          background: 'rgba(0, 0, 0, 0.25)',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-subtle)'
+        }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+            Service Queue:
+          </span>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {availableQueues.map(q => {
+              const isActive = currentQueue?.id === q.id;
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => onSelectQueue && onSelectQueue(q)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+                    background: isActive ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>{q.service?.name || `Queue #${q.id}`}</span>
+                  <span style={{
+                    background: isActive ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)',
+                    color: isActive ? '#090D16' : 'var(--text-subtle)',
+                    padding: '1px 7px',
+                    borderRadius: '8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700
+                  }}>
+                    {q.activeCounters || 1} {q.activeCounters === 1 ? 'desk' : 'desks'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {message && (
         <div style={{

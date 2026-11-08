@@ -105,6 +105,10 @@ export async function openQueue(serviceId, activeCounters = 2) {
   });
 }
 
+export async function getActiveQueues() {
+  return await apiRequest('/queues/active');
+}
+
 export async function getQueue(id) {
   return await apiRequest(`/queues/${id}`);
 }

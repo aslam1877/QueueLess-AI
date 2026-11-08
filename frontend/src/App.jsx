@@ -14,6 +14,7 @@ import {
   createService,
   openQueue,
   getQueue,
+  getActiveQueues,
   getMLHealth
 } from './services/api';
 
@@ -114,21 +115,22 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const urlQueueId = params.get('queue') || params.get('queueId');
 
-      if (urlQueueId) {
-        try {
-          const directQueue = await getQueue(urlQueueId);
-          if (directQueue) {
-            setCurrentQueue(directQueue);
-            setCurrentTab('customer');
-            setInitializing(false);
-            return;
-          }
-        } catch (err) {
-          console.warn("Could not load queue from URL query", err);
-        }
+      // Check for persistent active clinic queues from backend first
+      let active = [];
+      try {
+        active = await getActiveQueues();
+      } catch (err) {
+        console.warn("Could not fetch active queues from backend", err);
       }
 
-      await ensureDemoQueue();
+      if (active && active.length > 0) {
+        setAvailableQueues(active);
+        const matched = urlQueueId ? active.find(q => String(q.id) === String(urlQueueId)) : null;
+        setCurrentQueue(matched || active[0]);
+      } else {
+        await ensureDemoQueue();
+      }
+
       setInitializing(false);
     }
 
@@ -137,9 +139,20 @@ export default function App() {
 
   const handleQuickSwitchUser = async (role) => {
     try {
+      if (role === 'BUSINESS_OWNER') {
+        try {
+          const auth = await login('owner@apexclinic.com', 'Password123!');
+          setCurrentUser(auth.user);
+          setCurrentTab('staff');
+          return;
+        } catch (e) {
+          console.warn("Default owner login fallback to dynamic registration", e);
+        }
+      }
+
       const email = `demo_${role.toLowerCase()}_${Date.now()}@example.com`;
       await register({
-        name: role === 'BUSINESS_OWNER' ? 'Dr. Sarah Lin (Owner)' : 'Alex Johnson (Customer)',
+        name: role === 'BUSINESS_OWNER' ? 'Dr. Sarah Lin (Staff / Owner)' : 'Alex Johnson (Patient)',
         email,
         password: 'Password123!',
         role
@@ -225,6 +238,8 @@ export default function App() {
         {currentTab === 'analytics' && (
           <AnalyticsView
             currentQueue={currentQueue}
+            availableQueues={availableQueues}
+            onSelectQueue={setCurrentQueue}
           />
         )}
 
@@ -239,9 +254,35 @@ export default function App() {
         color: 'var(--text-subtle)',
         fontSize: '0.8rem',
         borderTop: '1px solid var(--border-subtle)',
-        marginTop: 'auto'
+        marginTop: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px'
       }}>
-        QueueLess AI • Spring Boot 4 Backend (Port 8080) • Python FastAPI ML Service (Port 8000) • React Vite (Port 5173)
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span>QueueLess AI • Enterprise Clinic Management</span>
+          <span>•</span>
+          <button
+            onClick={() => setCurrentTab(currentTab === 'ai' ? 'customer' : 'ai')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--primary)',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {currentTab === 'ai' ? '← Return to Patient View' : '🔬 Technical Specs & ML Attribution Inspector'}
+          </button>
+        </div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          Spring Boot 4 Backend (:8080) • Python FastAPI ML Engine (:8000) • React 19 Client (:5173)
+        </div>
       </footer>
     </div>
   );

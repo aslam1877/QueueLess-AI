@@ -89,6 +89,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/queues/*/entries").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/queues/*/entries/my").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.PUT, "/api/queue-entries/*/cancel").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/queues/active").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/queues/*").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/queue-entries/*/estimate").authenticated()
 

@@ -92,6 +92,14 @@ public class QueueService {
         return QueueResponse.from(queue);
     }
 
+    @Transactional(readOnly = true)
+    public List<QueueResponse> getActiveQueues() {
+        return queueRepository.findByStatus(QueueStatus.OPEN)
+                .stream()
+                .map(QueueResponse::from)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public QueueEntryResponse joinQueue(Long queueId, Long customerId) {
         Queue queue = queueRepository.findByIdForUpdate(queueId)

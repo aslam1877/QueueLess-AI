@@ -43,6 +43,11 @@ public class QueueController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping("/queues/active")
+    public ResponseEntity<List<QueueResponse>> getActiveQueues() {
+        return ResponseEntity.ok(queueService.getActiveQueues());
+    }
+
     @GetMapping("/queues/{id}")
     public ResponseEntity<QueueResponse> getQueue(@PathVariable Long id) {
         return ResponseEntity.ok(queueService.getQueueById(id));

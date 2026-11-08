@@ -15,7 +15,11 @@ import {
 } from 'lucide-react';
 import { getQueueEntries } from '../services/api';
 
-export default function AnalyticsView({ currentQueue }) {
+export default function AnalyticsView({ 
+  currentQueue, 
+  availableQueues = [], 
+  onSelectQueue 
+}) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,6 +95,52 @@ export default function AnalyticsView({ currentQueue }) {
           <span>Today's Session: <strong>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</strong></span>
         </div>
       </div>
+
+      {/* Service Queue Filter Pills */}
+      {availableQueues && availableQueues.length > 0 && (
+        <div style={{
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          background: 'rgba(0, 0, 0, 0.25)',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-subtle)'
+        }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+            Filter Service:
+          </span>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {availableQueues.map(q => {
+              const isActive = currentQueue?.id === q.id;
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => onSelectQueue && onSelectQueue(q)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+                    background: isActive ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>{q.service?.name || `Queue #${q.id}`}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Top 4 KPI Cards */}
       <div style={{

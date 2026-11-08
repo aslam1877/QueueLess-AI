@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -30,4 +31,7 @@ public interface QueueRepository extends JpaRepository<Queue, Long> {
     /** Find the open queue for a service on a specific date. */
     Optional<Queue> findByServiceIdAndQueueDateAndStatus(
             Long serviceId, LocalDate queueDate, QueueStatus status);
+
+    /** Find all queues with a specific status (e.g. OPEN). */
+    List<Queue> findByStatus(QueueStatus status);
 }
