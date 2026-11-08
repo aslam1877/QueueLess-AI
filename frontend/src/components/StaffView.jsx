@@ -11,8 +11,12 @@ import {
   PlusCircle,
   CheckCircle,
   Sliders,
-  Power
+  Power,
+  QrCode,
+  Volume2
 } from 'lucide-react';
+import QrCodeModal from './QrCodeModal';
+import { playCallChime } from '../utils/audioAlert';
 import { 
   getQueueEntries, 
   callNext, 
@@ -34,6 +38,8 @@ export default function StaffView({
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [activeDesk, setActiveDesk] = useState('Desk 1');
 
   const fetchEntries = async () => {
     if (!currentQueue?.id) return;
@@ -58,7 +64,8 @@ export default function StaffView({
     setError(null);
     try {
       const called = await callNext(currentQueue.id);
-      setMessage(`📢 Called Token ${called.tokenNumber}!`);
+      playCallChime();
+      setMessage(`📢 Called Token ${called.tokenNumber} to ${activeDesk}!`);
       await fetchEntries();
       await onRefreshQueue();
     } catch (err) {
@@ -141,26 +148,79 @@ export default function StaffView({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Active Desk Selector */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '10px',
+            padding: '4px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>My Station:</span>
+            <select
+              value={activeDesk}
+              onChange={(e) => setActiveDesk(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--primary)',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="Desk 1" style={{ background: '#0F172A', color: '#FFF' }}>Desk 1 (General)</option>
+              <option value="Desk 2" style={{ background: '#0F172A', color: '#FFF' }}>Desk 2 (Express)</option>
+              <option value="Desk 3" style={{ background: '#0F172A', color: '#FFF' }}>Desk 3 (Diagnostic)</option>
+            </select>
+          </div>
+
+          {/* QR Code Modal Button */}
+          <button
+            onClick={() => setShowQrModal(true)}
+            disabled={!currentQueue?.id}
+            style={{
+              background: 'linear-gradient(135deg, #06B6D4, #0891B2)',
+              border: 'none',
+              color: '#090D16',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 0 16px rgba(6, 182, 212, 0.3)'
+            }}
+          >
+            <QrCode size={16} />
+            📱 QR Code & Join Link
+          </button>
+
           <button
             onClick={handleAddTestCustomer}
             disabled={actionLoading || !currentQueue?.id}
             style={{
-              background: 'rgba(6, 182, 212, 0.12)',
-              border: '1px solid rgba(6, 182, 212, 0.3)',
-              color: 'var(--primary)',
-              padding: '10px 16px',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              padding: '10px 14px',
               borderRadius: '10px',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '6px'
             }}
           >
-            <PlusCircle size={16} />
-            + Simulate Waiting Customer
+            <PlusCircle size={15} />
+            + Test Customer
           </button>
 
           <button
@@ -517,6 +577,9 @@ export default function StaffView({
           </div>
         )}
       </div>
+      {showQrModal && (
+        <QrCodeModal queue={currentQueue} onClose={() => setShowQrModal(false)} />
+      )}
     </div>
   );
 }

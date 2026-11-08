@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import CustomerView from './components/CustomerView';
 import StaffView from './components/StaffView';
+import AnalyticsView from './components/AnalyticsView';
 import AiInspectorView from './components/AiInspectorView';
 import {
   login,
@@ -20,15 +21,16 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('customer');
   const [currentUser, setCurrentUser] = useState(null);
   const [currentQueue, setCurrentQueue] = useState(null);
+  const [availableQueues, setAvailableQueues] = useState([]);
   const [mlHealth, setMlHealth] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
-  // Initialize demo queue or load current state
+  // Initialize clinic services and open queues
   const ensureDemoQueue = async () => {
     try {
       const ownerEmail = `owner_${Date.now()}@queueless.com`;
       await register({
-        name: 'Dr. Sarah Lin',
+        name: 'Dr. Sarah Lin (Chief of Staff)',
         email: ownerEmail,
         password: 'Password123!',
         role: 'BUSINESS_OWNER'
@@ -39,21 +41,39 @@ export default function App() {
         name: 'Apex Diagnostic Imaging Clinic',
         address: '100 Medical Center Blvd, Suite 400',
         phone: '555-432-1098',
-        description: 'Advanced MRI and diagnostic clinic'
+        description: 'Advanced multi-specialty and diagnostic clinic'
       });
 
-      const svc = await createService(biz.id, {
+      const svc1 = await createService(biz.id, {
+        name: 'General Consultation & Triage',
+        description: 'Primary health consultation, vitals, and physician checkup',
+        estimatedDurationMinutes: 15
+      });
+
+      const svc2 = await createService(biz.id, {
         name: 'MRI Scan & Diagnostic Review',
-        description: 'Comprehensive 50-point diagnostic scan',
-        estimatedDurationMinutes: 25
+        description: 'Comprehensive 50-point diagnostic scan and radiology',
+        estimatedDurationMinutes: 30
       });
 
-      const q = await openQueue(svc.id, 2);
-      setCurrentQueue({
-        ...q,
-        service: svc,
-        business: biz
+      const svc3 = await createService(biz.id, {
+        name: 'Blood Test & Routine Lab Work',
+        description: 'Fast blood draw, metabolic panel, and lab sample intake',
+        estimatedDurationMinutes: 10
       });
+
+      const q1 = await openQueue(svc1.id, 2);
+      const q2 = await openQueue(svc2.id, 2);
+      const q3 = await openQueue(svc3.id, 1);
+
+      const allQueues = [
+        { ...q1, service: svc1, business: biz },
+        { ...q2, service: svc2, business: biz },
+        { ...q3, service: svc3, business: biz }
+      ];
+
+      setAvailableQueues(allQueues);
+      setCurrentQueue(allQueues[0]);
 
       const custEmail = `customer_${Date.now()}@example.com`;
       await register({
@@ -65,7 +85,7 @@ export default function App() {
       const custAuth = await login(custEmail, 'Password123!');
       setCurrentUser(custAuth.user);
 
-      return q;
+      return allQueues[0];
     } catch (e) {
       console.warn("Demo seed failed:", e);
     }
@@ -87,6 +107,24 @@ export default function App() {
         } catch (e) {
           removeToken();
           setCurrentUser(null);
+        }
+      }
+
+      // Check URL parameters for direct QR code joins: ?queue=1
+      const params = new URLSearchParams(window.location.search);
+      const urlQueueId = params.get('queue') || params.get('queueId');
+
+      if (urlQueueId) {
+        try {
+          const directQueue = await getQueue(urlQueueId);
+          if (directQueue) {
+            setCurrentQueue(directQueue);
+            setCurrentTab('customer');
+            setInitializing(false);
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not load queue from URL query", err);
         }
       }
 
@@ -167,6 +205,8 @@ export default function App() {
         {currentTab === 'customer' && (
           <CustomerView
             currentQueue={currentQueue}
+            availableQueues={availableQueues}
+            onSelectQueue={setCurrentQueue}
             currentUser={currentUser}
             onEnsureDemoQueue={ensureDemoQueue}
           />
@@ -175,8 +215,16 @@ export default function App() {
         {currentTab === 'staff' && (
           <StaffView
             currentQueue={currentQueue}
+            availableQueues={availableQueues}
+            onSelectQueue={setCurrentQueue}
             onRefreshQueue={refreshCurrentQueue}
             onEnsureDemoQueue={ensureDemoQueue}
+          />
+        )}
+
+        {currentTab === 'analytics' && (
+          <AnalyticsView
+            currentQueue={currentQueue}
           />
         )}
 

@@ -121,6 +121,32 @@ export async function joinQueue(queueId) {
   });
 }
 
+export async function quickJoinAsGuest(queueId, guestName) {
+  const token = getToken();
+  const user = getStoredUser();
+
+  if (token && user && user.role === 'CUSTOMER') {
+    const entry = await joinQueue(queueId);
+    return { entry, user };
+  }
+
+  const ts = Date.now();
+  const rand = Math.floor(Math.random() * 10000);
+  const guestEmail = `guest_${ts}_${rand}@queueless.guest`;
+  const guestPassword = `Guest_${ts}!`;
+
+  await register({
+    name: (guestName && guestName.trim()) ? guestName.trim() : `Walk-in Guest #${rand % 1000}`,
+    email: guestEmail,
+    password: guestPassword,
+    role: 'CUSTOMER',
+  });
+
+  const auth = await login(guestEmail, guestPassword);
+  const entry = await joinQueue(queueId);
+  return { entry, user: auth.user };
+}
+
 export async function getMyPosition(queueId) {
   return await apiRequest(`/queues/${queueId}/entries/my`);
 }

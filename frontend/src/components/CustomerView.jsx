@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Ticket, 
   Clock, 
@@ -11,14 +11,30 @@ import {
   XCircle,
   Activity,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  BellRing,
+  Volume2,
+  VolumeX,
+  Coffee,
+  ShieldCheck,
+  Zap,
+  Info
 } from 'lucide-react';
 import { 
   getMyPosition, 
   joinQueue, 
   cancelMyEntry, 
-  getWaitEstimate 
+  getWaitEstimate,
+  quickJoinAsGuest 
 } from '../services/api';
+import { 
+  playCallChime, 
+  requestNotificationPermission, 
+  sendBrowserNotification, 
+  flashTabTitle, 
+  stopFlashingTitle 
+} from '../utils/audioAlert';
 
 export default function CustomerView({ 
   currentQueue, 
@@ -32,6 +48,14 @@ export default function CustomerView({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  
+  // Audio & Notification state
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [notificationStatus, setNotificationStatus] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  );
+  const [guestName, setGuestName] = useState('');
+  const prevStatusRef = useRef(null);
 
   // Fetch customer position
   const fetchPosition = async (showSpinner = false) => {
@@ -39,11 +63,26 @@ export default function CustomerView({
     if (showSpinner) setRefreshing(true);
     try {
       const pos = await getMyPosition(currentQueue.id);
+      
+      // Check for status transition to CALLED -> Fire Audio & Push Alerts
+      if (pos && pos.status === 'CALLED' && prevStatusRef.current !== 'CALLED') {
+        if (soundEnabled) {
+          playCallChime();
+        }
+        sendBrowserNotification(`📢 Token ${pos.tokenNumber} has been called!`, {
+          body: `Your counter is ready at ${pos.businessName || 'the clinic'}. Please proceed inside immediately.`
+        });
+        flashTabTitle(`🔔 (CALLED) ${pos.tokenNumber} Ready!`);
+      } else if (pos && (pos.status === 'COMPLETED' || pos.status === 'CANCELLED')) {
+        stopFlashingTitle();
+      }
+
+      prevStatusRef.current = pos?.status || null;
       setActiveTicket(pos);
       setError(null);
 
       // Fetch detailed estimate breakdown
-      if (pos.queueEntryId) {
+      if (pos && pos.queueEntryId) {
         try {
           const est = await getWaitEstimate(pos.queueEntryId);
           setDetailedEstimate(est);
@@ -55,6 +94,8 @@ export default function CustomerView({
       // 404 means no active entry in queue
       setActiveTicket(null);
       setDetailedEstimate(null);
+      prevStatusRef.current = null;
+      stopFlashingTitle();
     } finally {
       if (showSpinner) setRefreshing(false);
     }
@@ -62,6 +103,9 @@ export default function CustomerView({
 
   useEffect(() => {
     fetchPosition();
+    return () => {
+      stopFlashingTitle();
+    };
   }, [currentQueue?.id, currentUser?.id]);
 
   // Polling loop for live position updates
@@ -71,7 +115,7 @@ export default function CustomerView({
       fetchPosition(false);
     }, 4000);
     return () => clearInterval(interval);
-  }, [autoRefresh, activeTicket?.tokenNumber, currentQueue?.id]);
+  }, [autoRefresh, activeTicket?.tokenNumber, currentQueue?.id, soundEnabled]);
 
   const handleJoin = async () => {
     if (!currentQueue) {
@@ -81,7 +125,8 @@ export default function CustomerView({
     setLoading(true);
     setError(null);
     try {
-      await joinQueue(currentQueue.id);
+      // Use seamless walk-in quick join (creates guest account automatically if not logged in)
+      await quickJoinAsGuest(currentQueue.id, guestName);
       await fetchPosition(true);
     } catch (err) {
       setError(err.message || 'Failed to join queue');
@@ -98,11 +143,26 @@ export default function CustomerView({
       await cancelMyEntry(activeTicket.queueEntryId);
       setActiveTicket(null);
       setDetailedEstimate(null);
+      stopFlashingTitle();
     } catch (err) {
       setError(err.message || 'Failed to cancel entry');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEnableNotifications = async () => {
+    const res = await requestNotificationPermission();
+    setNotificationStatus(res);
+    if (res === 'granted') {
+      sendBrowserNotification("✅ Step-Away Notifications Enabled!", {
+        body: "You can safely minimize this tab. We will alert you the moment your token is called."
+      });
+    }
+  };
+
+  const handleTestChime = () => {
+    playCallChime();
   };
 
   const isCalled = activeTicket?.status === 'CALLED';
@@ -111,13 +171,78 @@ export default function CustomerView({
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 24px 48px 24px' }}>
       
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>
-          Customer Queue Portal
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          Track your live queue position with sub-minute AI wait-time intelligence.
-        </p>
+      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>
+            Customer Queue Portal
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+            Track your live place in line with sub-minute AI wait predictions and step-away alerts.
+          </p>
+        </div>
+
+        {/* Quick Alert Settings Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            title={soundEnabled ? 'Sound alerts active' : 'Sound alerts muted'}
+            style={{
+              background: soundEnabled ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${soundEnabled ? 'var(--primary)' : 'var(--border-subtle)'}`,
+              color: soundEnabled ? 'var(--primary)' : 'var(--text-muted)',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            {soundEnabled ? 'Chime ON' : 'Chime Muted'}
+          </button>
+
+          {soundEnabled && (
+            <button
+              onClick={handleTestChime}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: '0.78rem'
+              }}
+            >
+              Test Chime
+            </button>
+          )}
+
+          {notificationStatus !== 'granted' && (
+            <button
+              onClick={handleEnableNotifications}
+              style={{
+                background: 'rgba(139, 92, 246, 0.15)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                color: '#A78BFA',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Bell size={15} />
+              Enable Push Alerts
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -139,41 +264,44 @@ export default function CustomerView({
 
       {activeTicket ? (
         <div>
+          {/* CALLED HERO BANNER */}
           {isCalled && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(16, 185, 129, 0.25))',
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(16, 185, 129, 0.28))',
               border: '2px solid var(--primary)',
               borderRadius: '16px',
-              padding: '20px 24px',
+              padding: '24px',
               marginBottom: '24px',
-              boxShadow: '0 0 30px rgba(6, 182, 212, 0.35)',
+              boxShadow: '0 0 35px rgba(6, 182, 212, 0.45)',
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
+              gap: '18px',
               animation: 'pulse-border 2s infinite'
             }}>
               <div style={{
                 background: 'var(--primary)',
-                width: '48px',
-                height: '48px',
+                width: '52px',
+                height: '52px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                <Sparkles size={26} color="#090D16" />
+                <Sparkles size={28} color="#090D16" />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  🎉 YOUR TICKET HAS BEEN CALLED!
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '4px' }}>
+                  📢 TICKET {activeTicket.tokenNumber} IS CALLED!
                 </h3>
-                <p style={{ color: '#E0F2FE', fontSize: '0.95rem' }}>
-                  Please proceed immediately to the service desk. Your counter is ready.
+                <p style={{ color: '#E0F2FE', fontSize: '0.98rem' }}>
+                  Please proceed immediately to the service desk. Your assigned counter is waiting.
                 </p>
               </div>
             </div>
           )}
 
+          {/* MAIN TICKET CARD */}
           <div className="glass-panel" style={{
             padding: '32px',
             marginBottom: '24px',
@@ -199,13 +327,13 @@ export default function CustomerView({
                   color: 'var(--text-muted)',
                   marginBottom: '10px'
                 }}>
-                  Live Queue Ticket
+                  Digital Queue Ticket
                 </span>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF' }}>
-                  {activeTicket.businessName || 'Medical Service'}
+                  {activeTicket.businessName || 'Apex Diagnostic Imaging Clinic'}
                 </h2>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  {activeTicket.serviceName || 'General Consultation'}
+                  {activeTicket.serviceName || 'MRI Scan & Diagnostic Review'}
                 </div>
               </div>
 
@@ -231,6 +359,7 @@ export default function CustomerView({
               </div>
             </div>
 
+            {/* Token, Position & Wait-Time Metrics */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -247,7 +376,7 @@ export default function CustomerView({
                 </div>
                 <div style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '3rem',
+                  fontSize: '3.2rem',
                   fontWeight: 800,
                   color: 'var(--primary)',
                   letterSpacing: '0.05em'
@@ -263,7 +392,7 @@ export default function CustomerView({
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                   Queue Position
                 </div>
-                <div style={{ fontSize: '3rem', fontWeight: 800, color: '#FFFFFF', fontFamily: 'var(--font-heading)' }}>
+                <div style={{ fontSize: '3.2rem', fontWeight: 800, color: '#FFFFFF', fontFamily: 'var(--font-heading)' }}>
                   #{activeTicket.position}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -280,7 +409,7 @@ export default function CustomerView({
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                   Estimated Wait Time
                 </div>
-                <div style={{ fontSize: '3rem', fontWeight: 800, color: '#38BDF8', fontFamily: 'var(--font-heading)' }}>
+                <div style={{ fontSize: '3.2rem', fontWeight: 800, color: '#38BDF8', fontFamily: 'var(--font-heading)' }}>
                   {activeTicket.estimatedWaitMinutes} <span style={{ fontSize: '1.25rem', fontWeight: 600 }}>min</span>
                 </div>
                 <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -297,6 +426,40 @@ export default function CustomerView({
               </div>
             </div>
 
+            {/* REAL-WORLD "STEP AWAY" ADVICE BOX */}
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.2)',
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Coffee size={22} color="var(--success)" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.9rem', marginBottom: '2px' }}>
+                  You don't have to wait in the room!
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0, lineHeight: '1.4' }}>
+                  Feel free to step outside or grab a drink nearby. Keep your phone with sound on — we will chime and send a desktop alert the moment your number is announced.
+                </p>
+              </div>
+            </div>
+
+            {/* AI Estimation Rationale */}
             {detailedEstimate && (
               <div style={{
                 background: 'rgba(6, 182, 212, 0.05)',
@@ -338,10 +501,11 @@ export default function CustomerView({
               </div>
             )}
 
+            {/* Actions & Auto-refresh status */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
                 <span className="pulse-indicator"></span>
-                <span>Auto-refreshing every 4s</span>
+                <span>Auto-refreshing every 4s • Sound alerts active</span>
               </div>
 
               <button
@@ -369,9 +533,9 @@ export default function CustomerView({
           </div>
         </div>
       ) : (
-        /* CASE 2: CUSTOMER NOT IN QUEUE (SELECT SERVICE & JOIN) */
+        /* CASE 2: CUSTOMER NOT IN QUEUE (FRICTIONLESS WALK-IN JOIN) */
         <div>
-          <div className="glass-panel" style={{ padding: '32px', marginBottom: '32px', textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '36px', marginBottom: '32px', textAlign: 'center' }}>
             <div style={{
               width: '64px',
               height: '64px',
@@ -386,37 +550,83 @@ export default function CustomerView({
               <Ticket size={32} color="var(--primary)" />
             </div>
 
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>
-              Join Today's Live Queue
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '8px' }}>
+              Take a Digital Queue Ticket
             </h2>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto 28px auto', fontSize: '0.95rem' }}>
-              Skip physical waiting lines. Grab an instant digital token and receive precise AI-computed wait time estimates directly on your phone or browser.
+            <p style={{ color: 'var(--text-muted)', maxWidth: '540px', margin: '0 auto 28px auto', fontSize: '0.95rem' }}>
+              No account creation needed. Grab an instant walk-in token and monitor your live wait time directly on your phone.
             </p>
 
             {currentQueue ? (
-              <button
-                onClick={handleJoin}
-                disabled={loading}
-                style={{
-                  background: 'linear-gradient(135deg, #06B6D4, #0891B2)',
-                  border: 'none',
-                  color: '#090D16',
-                  padding: '16px 36px',
+              <div style={{ maxWidth: '440px', margin: '0 auto' }}>
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid var(--border-subtle)',
                   borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: '0 0 24px rgba(6, 182, 212, 0.4)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Ticket size={20} />
-                {loading ? 'Issuing Ticket...' : `Get Ticket for ${currentQueue.service?.name || 'Service'}`}
-                <ArrowRight size={18} />
-              </button>
+                  padding: '16px',
+                  marginBottom: '20px',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    Active Service:
+                  </div>
+                  <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '1.05rem' }}>
+                    {currentQueue.service?.name || 'Medical Consultation'}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>
+                    {currentQueue.business?.name || 'Diagnostic Center'}
+                  </div>
+                </div>
+
+                {/* Optional Name Input */}
+                <div style={{ marginBottom: '18px', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                    Your Name or Alias (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="e.g., Alex Johnson"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '10px',
+                      padding: '12px 16px',
+                      color: '#FFFFFF',
+                      fontSize: '0.95rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={handleJoin}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #06B6D4, #0891B2)',
+                    border: 'none',
+                    color: '#090D16',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    fontSize: '1.05rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 0 24px rgba(6, 182, 212, 0.4)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Ticket size={20} />
+                  {loading ? 'Issuing Ticket...' : 'Grab My Digital Token'}
+                  <ArrowRight size={18} />
+                </button>
+              </div>
             ) : (
               <div style={{
                 background: 'rgba(255, 255, 255, 0.04)',
@@ -430,7 +640,7 @@ export default function CustomerView({
                   No Active Queue Open
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '16px' }}>
-                  Click below to automatically setup a sample clinic queue with active counters.
+                  Click below to initialize today's clinic queue with active service counters.
                 </p>
                 <button
                   onClick={onEnsureDemoQueue}
@@ -445,7 +655,7 @@ export default function CustomerView({
                     fontSize: '0.85rem'
                   }}
                 >
-                  Initialize Demo Queue
+                  Open Sample Clinic Queue
                 </button>
               </div>
             )}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "9b402e37-7839-4fdb-ae26-5d685f7f5f6b",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\candidate.json",
+  "output": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\queueless-runtime.html",
+  "specification": {
+    "sha256": "055c41f429e67b739397376a8ec387fe9a312acf4e2ba5d0db82738bf41e88ef",
+    "bytes": 6740
+  },
+  "artifact": {
+    "sha256": "95246248b2224aee32c96302a121a7f5574d4de9e2302c7d3881316f989c245b",
+    "bytes": 852545
+  }
+}

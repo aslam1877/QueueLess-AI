@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "QueueLess AI Runtime Architecture",
+    "output": ".archify/architecture-runtime-20261108-211500/queueless-runtime.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/aslam1877/QueueLess-AI.git",
+      "revision": "fcc4f134ccb71436aa755886623fa4edf56bc1a0"
+    }
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "Customer / Staff",
+      "sublabel": "Browser Web Client",
+      "pos": [40, 50],
+      "size": [120, 60]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React 19 + Vite",
+      "sublabel": "UI & Proxy :5173",
+      "pos": [230, 50],
+      "size": [130, 60],
+      "sources": [
+        { "path": "frontend/src/App.jsx", "line": 1, "end_line": 25, "label": "App routing & tabs" }
+      ]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "Spring Security",
+      "sublabel": "JWT Filter & RBAC",
+      "tag": "Stateless",
+      "pos": [430, 50],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/config/SecurityConfig.java", "line": 20, "end_line": 55, "label": "Security filter chain" }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "REST Controllers",
+      "sublabel": "Spring Boot 4 :8080",
+      "pos": [630, 50],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/controller/QueueController.java", "line": 25, "end_line": 65, "label": "Queue REST endpoints" }
+      ]
+    },
+    {
+      "id": "wait_service",
+      "type": "backend",
+      "label": "Wait Estimation",
+      "sublabel": "Adaptive Calculation",
+      "pos": [830, 50],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/service/WaitTimeEstimationService.java", "line": 20, "end_line": 60, "label": "Wait time estimation" }
+      ]
+    },
+    {
+      "id": "queue_engine",
+      "type": "backend",
+      "label": "Queue Engine",
+      "sublabel": "Concurrency & Tokens",
+      "tag": "Atomic Counter",
+      "pos": [630, 200],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/service/QueueService.java", "line": 25, "end_line": 70, "label": "Queue lifecycle service" }
+      ]
+    },
+    {
+      "id": "pred_client",
+      "type": "backend",
+      "label": "PredictionClient",
+      "sublabel": "HTTP RestClient",
+      "tag": "Circuit Breaker",
+      "pos": [830, 200],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/client/PredictionClient.java", "line": 20, "end_line": 50, "label": "HTTP client & fallback" }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "H2 / MySQL",
+      "sublabel": "Spring Data JPA :mem",
+      "tag": "Hibernate 7",
+      "pos": [630, 350],
+      "size": [130, 60],
+      "sources": [
+        { "path": "backend/src/main/java/com/queueless/repository/QueueRepository.java", "line": 10, "end_line": 25, "label": "JPA Repository" }
+      ]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI Service",
+      "sublabel": "Python Uvicorn :8000",
+      "pos": [1040, 200],
+      "size": [130, 60],
+      "sources": [
+        { "path": "ml-service/app/main.py", "line": 15, "end_line": 45, "label": "FastAPI inference router" }
+      ]
+    },
+    {
+      "id": "gbm_model",
+      "type": "backend",
+      "label": "Gradient Boosting",
+      "sublabel": "scikit-learn Regressor",
+      "tag": "R²=0.9875",
+      "pos": [1040, 350],
+      "size": [130, 60],
+      "sources": [
+        { "path": "ml-service/app/model.py", "line": 15, "end_line": 50, "label": "Inference predictor" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Spring Boot JVM Boundary (:8080)",
+      "wraps": ["security", "api", "wait_service", "queue_engine", "pred_client"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Python Microservice Boundary (:8000)",
+      "wraps": ["fastapi", "gbm_model"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-users-fe",
+      "from": "users",
+      "to": "frontend",
+      "label": "HTTPS / UI",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-fe-sec",
+      "from": "frontend",
+      "to": "security",
+      "label": "REST /api",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-sec-api",
+      "from": "security",
+      "to": "api",
+      "label": "JWT Bearer",
+      "variant": "security"
+    },
+    {
+      "id": "c-api-wait",
+      "from": "api",
+      "to": "wait_service",
+      "label": "estimate wait",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-wait-pred",
+      "from": "wait_service",
+      "to": "pred_client",
+      "label": "predict payload",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-pred-fastapi",
+      "from": "pred_client",
+      "to": "fastapi",
+      "label": "POST /predict",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-fastapi-gbm",
+      "from": "fastapi",
+      "to": "gbm_model",
+      "label": "inference",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-api-queue",
+      "from": "api",
+      "to": "queue_engine",
+      "label": "queue lifecycle"
+    },
+    {
+      "id": "c-queue-db",
+      "from": "queue_engine",
+      "to": "db",
+      "label": "Spring Data JPA"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Primary Path: Live Wait-Time Estimation",
+      "items": [
+        "Customer requests wait time via GET /api/queue-entries/{id}/estimate",
+        "Spring Security validates JWT token & user permissions",
+        "WaitTimeEstimationService extracts queue backlog & active counter metrics",
+        "PredictionClient dispatches HTTP call to Python FastAPI POST /predict",
+        "Gradient Boosting Regressor calculates sub-minute wait-time adjustment"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Circuit-Breaker & Resilient Fallback",
+      "items": [
+        "PredictionClient configured with 2000ms connect and 3000ms read timeouts",
+        "Zero-downtime degradation: falls back to deterministic formula ⌈(P × D) / C⌉",
+        "System remains fully functional if Python ML service is offline or slow"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Queue Concurrency & Persistence",
+      "items": [
+        "Sequential atomic token allocation: T-001, T-002, T-003",
+        "Strict FIFO ordering and concurrency-safe token advancement",
+        "Spring Data JPA with H2 in-memory (dev) and MySQL profile (prod)"
+      ]
+    }
+  ]
+}

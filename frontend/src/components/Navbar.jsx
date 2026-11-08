@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Users, LayoutDashboard, Brain, LogIn, LogOut, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Users, LayoutDashboard, Brain, LogIn, LogOut, CheckCircle2, BarChart3 } from 'lucide-react';
 
 export default function Navbar({ 
   currentTab, 
@@ -82,6 +82,27 @@ export default function Navbar({
           >
             <LayoutDashboard size={16} />
             Staff Command Center
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('analytics')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              transition: 'all 0.2s',
+              background: currentTab === 'analytics' ? 'var(--primary)' : 'transparent',
+              color: currentTab === 'analytics' ? '#090D16' : 'var(--text-muted)'
+            }}
+          >
+            <BarChart3 size={16} />
+            Analytics
           </button>
 
           <button

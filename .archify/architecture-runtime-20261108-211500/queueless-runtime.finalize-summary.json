@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\candidate.json",
+    "sha256": "055c41f429e67b739397376a8ec387fe9a312acf4e2ba5d0db82738bf41e88ef",
+    "bytes": 6740
+  },
+  "artifact": {
+    "path": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\queueless-runtime.html",
+    "sha256": "95246248b2224aee32c96302a121a7f5574d4de9e2302c7d3881316f989c245b",
+    "bytes": 852545
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\queueless-runtime.finalize.json",
+    "summaryReceipt": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\queueless-runtime.finalize-summary.json",
+    "browserCheckReceipt": "C:\\Users\\aslam\\OneDrive\\Desktop\\QueueLess AI\\.archify\\architecture-runtime-20261108-211500\\queueless-runtime.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-08T15:46:28.482Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3948,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}
